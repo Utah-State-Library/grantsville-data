@@ -1,0 +1,864 @@
+---
+title: "Grantsville City Library"
+format: html
+theme: sandstone
+execute:
+    echo: false
+    message: false
+---
+
+
+```{r}
+#| label: setup
+#| warning: false
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(reactable)
+library(reactablefmtr)
+```
+
+```{r}
+utpls <- readRDS("./utpls.RDS")
+```
+
+
+## 2024 Statistics for Grantsville Public Library
+
+```{r}
+gv_df <- utpls %>%
+  filter(FSCSKEY == "UT8003", FISCAL_YEAR %in% c("2023", "2024")) %>%
+  select(
+    FISCAL_YEAR,
+    POPU_LSA,
+    TOTSTAFF,
+    LOCGVT,
+    STGVT,
+    FEDGVT,
+    OTHINCM,
+    TOTINCM,
+    REGBOR,
+    PITUSR,
+    GPTERMS,
+    REFERENC,
+    PHYSCIR,
+    KIDCIRCL,
+    ELMATCIR,
+    VISITS,
+    PHYSCIR,
+    LOANFM,
+    ends_with("PRO"),
+    ends_with("ATTEN")
+  ) %>%
+  mutate(across(POPU_LSA:TOTATTEN, ~ as.numeric(.)))
+
+gv_df %<>%
+  pivot_longer(
+    !c(FISCAL_YEAR),
+    names_to = "Metric",
+    values_to = "y"
+  ) %>%
+  pivot_wider(
+    names_from = "FISCAL_YEAR",
+    names_glue = "v_{FISCAL_YEAR}",
+    values_from = "y"
+  )
+
+gv_df %<>%
+  mutate(diff_pct = round(((v_2024 - v_2023) / v_2023), 4))
+
+gv_df %<>%
+  mutate(
+    Metric_pretty = case_when(
+      Metric == "POPU_LSA" ~ "Population of Legal Service Area",
+      Metric == "TOTSTAFF" ~ "FTE",
+      Metric == "LOCGVT" ~ "Local Revenue",
+      Metric == "STGVT" ~ "State Revenue",
+      Metric == "FEDGVT" ~ "Federal Revenue",
+      Metric == "OTHINCM" ~ "Other Revenue",
+      Metric == "TOTINCM" ~ "Total Revenue",
+      Metric == "REGBOR" ~ "Card Holders",
+      Metric == "PITUSR" ~ "Public Computer Uses",
+      Metric == "REFERENC" ~ "Reference Transactions",
+      Metric == "PHYSCIR" ~ "Physical Item Circulation",
+      Metric == "KIDCIRCL" ~ "Childrens Item Circulation",
+      Metric == "ELMATCIR" ~ "Electronic Material Circulation",
+      Metric == "VISITS" ~ "Visits",
+      Metric == "LOANFM" ~ "ILLs Received",
+      Metric == "GPTERMS" ~ "Number of Public Computers",
+      Metric == "TOTPRO" ~ "Total Number of Programs",
+      Metric == "K0_5PRO" ~ "Childrens Programs (ages 0-5)",
+      Metric == "K6_11PRO" ~ "Childrens Programs (ages 6-11)",
+      Metric == "YAPRO" ~ "Young Adult Programs (ages 12-18)",
+      Metric == "ADULTPRO" ~ "Adult Programs (ages 19+)",
+      Metric == "GENPRO" ~ "General Interest Programs",
+      Metric == "K0_5ATTEN" ~ "Childrens Attendance (ages 0-5)",
+      Metric == "K6_11ATTEN" ~ "Childrens Attendance (ages 6-11)",
+      Metric == "YAATTEN" ~ "Young Adult Attendance (ages 12-18)",
+      Metric == "ADULTATTEN" ~ "Adult Attendance (ages 19+)",
+      Metric == "GENATTEN" ~ "General Interest Attendance",
+      Metric == "TOTATTEN" ~ "Total Attendance"
+    )
+  )
+```
+
+::: {.panel-tabset}
+
+## Library at a Glance
+
+Grantsville City Library has seen an increase in its number of card holders, visits, and program offerings above and beyond the growth in population this past year. 
+
+```{r}
+overview <- gv_df %>%
+  filter(
+    Metric %in%
+      c(
+        "POPU_LSA",
+        "TOTINCM",
+        "TOTSTAFF",
+        "VISITS",
+        "REGBOR",
+        "TOTPRO",
+        "TOTATTEN"
+      )
+  ) %>%
+  select(Metric_pretty, v_2023, v_2024, diff_pct)
+
+overview %>%
+  reactable(
+    resizable = T,
+    defaultExpanded = F,
+    compact = T,
+    striped = T,
+    defaultColDef = colDef(
+      align = "left",
+    ),
+    theme = reactableTheme(
+      backgroundColor = "transparent",
+      headerStyle = list(borderColor = "#555")
+    ),
+    columns = list(
+      Metric_pretty = colDef(name = ""),
+      v_2023 = colDef(
+        name = "2023",
+        format = colFormat(separators = TRUE)
+      ),
+      v_2024 = colDef(
+        name = "2024",
+        format = colFormat(separators = TRUE)
+      ),
+      diff_pct = colDef(
+        name = "Change from Last Year",
+        format = colFormat(percent = TRUE, digits = 2)
+      )
+    )
+  )
+```
+
+## Services
+
+Use of all services is up from last year, aside from ILLs. Decreases in ILLs may indicate that the library is carrying the books that patrons are interested in. Fewer ILLs also reduces costs associated with transporting books between libraries.
+
+```{r}
+services <- gv_df %>%
+  filter(
+    Metric %in%
+      c("REGBOR", "VISITS", "PITUSR", "REFERENC", "LOANFM", "GPTERMS")
+  ) %>%
+  select(Metric_pretty, v_2023, v_2024, diff_pct)
+
+services %>%
+  reactable(
+    resizable = T,
+    defaultExpanded = F,
+    compact = T,
+    striped = T,
+    defaultColDef = colDef(
+      align = "left",
+    ),
+    theme = reactableTheme(
+      backgroundColor = "transparent",
+      headerStyle = list(borderColor = "#555")
+    ),
+    columns = list(
+      Metric_pretty = colDef(name = ""),
+      v_2023 = colDef(
+        name = "2023",
+        format = colFormat(separators = TRUE)
+      ),
+      v_2024 = colDef(
+        name = "2024",
+        format = colFormat(separators = TRUE)
+      ),
+      diff_pct = colDef(
+        name = "Change from Last Year",
+        format = colFormat(percent = TRUE, digits = 2)
+      )
+    )
+  )
+```
+
+## Revenue
+
+Grantsville City Library receives nearly all of its revenue from the local community. Between 2023 and 2024 revenue went up by about 30%.
+
+```{r}
+revenue <- gv_df %>%
+  filter(
+    Metric %in%
+      c("LOCGVT", "STGVT", "FEDGVT", "OTHINCM", "TOTINCM")
+  ) %>%
+  select(Metric_pretty, v_2023, v_2024, diff_pct)
+
+revenue %>%
+  reactable(
+    resizable = T,
+    defaultExpanded = F,
+    compact = T,
+    striped = T,
+    defaultColDef = colDef(
+      align = "left",
+    ),
+    theme = reactableTheme(
+      backgroundColor = "transparent",
+      headerStyle = list(borderColor = "#555")
+    ),
+    columns = list(
+      Metric_pretty = colDef(name = ""),
+      v_2023 = colDef(
+        name = "2023",
+        format = colFormat(separators = TRUE)
+      ),
+      v_2024 = colDef(
+        name = "2024",
+        format = colFormat(separators = TRUE)
+      ),
+      diff_pct = colDef(
+        name = "Change from Last Year",
+        format = colFormat(percent = TRUE, digits = 2)
+      )
+    )
+  )
+```
+
+
+## Circulation
+
+Circulation of all materials are up from last year, with electronic material circulation increasing the most.
+
+```{r}
+circ <- gv_df %>%
+  filter(
+    Metric %in%
+      c("PHYSCIR", "KIDCIRCL", "ELMATCIR")
+  ) %>%
+  select(Metric_pretty, v_2023, v_2024, diff_pct)
+
+circ %>%
+  reactable(
+    resizable = T,
+    defaultExpanded = F,
+    compact = T,
+    striped = T,
+    defaultColDef = colDef(
+      align = "left",
+    ),
+    theme = reactableTheme(
+      backgroundColor = "transparent",
+      headerStyle = list(borderColor = "#555")
+    ),
+    columns = list(
+      Metric_pretty = colDef(name = ""),
+      v_2023 = colDef(
+        name = "2023",
+        format = colFormat(separators = TRUE)
+      ),
+      v_2024 = colDef(
+        name = "2024",
+        format = colFormat(separators = TRUE)
+      ),
+      diff_pct = colDef(
+        name = "Change from Last Year",
+        format = colFormat(percent = TRUE, digits = 2)
+      )
+    )
+  )
+```
+
+## Programs
+
+The number of children's programs being offered at Grantsville City Library has increased from last year to this year, with many more programs being offered to children from ages 0 - 11. There has been a slight decrease in adult programs and in general interest programs, with 3 fewer adult programs and 5 fewer general interest programs.
+
+```{r}
+programs <- gv_df %>%
+  filter(
+    Metric %in%
+      c("K0_5PRO", "K6_11PRO", "YAPRO", "ADULTPRO", "GENPRO", "TOTPRO")
+  ) %>%
+  arrange(factor(
+    Metric,
+    levels = c("K0_5PRO", "K6_11PRO", "YAPRO", "ADULTPRO", "GENPRO", "TOTPRO")
+  )) %>%
+  select(Metric_pretty, v_2023, v_2024, diff_pct)
+
+programs %>%
+  reactable(
+    resizable = T,
+    defaultExpanded = F,
+    compact = T,
+    striped = T,
+    defaultColDef = colDef(
+      align = "left",
+    ),
+    theme = reactableTheme(
+      backgroundColor = "transparent",
+      headerStyle = list(borderColor = "#555")
+    ),
+    columns = list(
+      Metric_pretty = colDef(name = ""),
+      v_2023 = colDef(
+        name = "2023",
+        format = colFormat(separators = TRUE)
+      ),
+      v_2024 = colDef(
+        name = "2024",
+        format = colFormat(separators = TRUE)
+      ),
+      diff_pct = colDef(
+        name = "Change from Last Year",
+        format = colFormat(percent = TRUE, digits = 2)
+      )
+    )
+  )
+```
+
+## Program Attendance
+
+Attendance at children's programs has increased, particularly among young adults, while attendance at adult and general interest programs has fallen. 
+
+```{r}
+attend <- gv_df %>%
+  filter(
+    Metric %in%
+      c(
+        "K0_5ATTEN",
+        "K6_11ATTEN",
+        "YAATTEN",
+        "ADULTATTEN",
+        "GENATTEN",
+        "TOTATTEN"
+      )
+  ) %>%
+  select(Metric_pretty, v_2023, v_2024, diff_pct)
+
+attend %>%
+  reactable(
+    resizable = T,
+    defaultExpanded = F,
+    compact = T,
+    striped = T,
+    defaultColDef = colDef(
+      align = "left",
+    ),
+    theme = reactableTheme(
+      backgroundColor = "transparent",
+      headerStyle = list(borderColor = "#555")
+    ),
+    columns = list(
+      Metric_pretty = colDef(name = ""),
+      v_2023 = colDef(
+        name = "2023",
+        format = colFormat(separators = TRUE)
+      ),
+      v_2024 = colDef(
+        name = "2024",
+        format = colFormat(separators = TRUE)
+      ),
+      diff_pct = colDef(
+        name = "Change from Last Year",
+        format = colFormat(percent = TRUE, digits = 2)
+      )
+    )
+  )
+```
+
+:::
+
+```{r}
+#| include: false
+
+# What does Grantsville have to work with?
+
+cols <- c("TOTOPEXP", "STAFFEXP", "TOTEXPCO", "OTHOPEXP")
+
+utpls %>%
+  filter(FSCSKEY == "UT8003") %>%
+  select(FISCAL_YEAR, POPU_LSA, all_of(cols)) %>%
+  mutate(across(c(POPU_LSA, cols), ~ as.numeric(.))) %>%
+  mutate(
+    STAFF_PCT = round((STAFFEXP / TOTOPEXP) * 100, 2),
+    COLLECTION_PCT = round((TOTEXPCO / TOTOPEXP) * 100, 2),
+    OTHOP_PCT = round((OTHOPEXP / TOTOPEXP) * 100, 2)
+  ) %>%
+  select(
+    FISCAL_YEAR,
+    POPU_LSA,
+    TOTOPEXP,
+    STAFFEXP,
+    STAFF_PCT,
+    TOTEXPCO,
+    COLLECTION_PCT,
+    OTHOPEXP,
+    OTHOP_PCT
+  ) %>%
+  arrange(desc(FISCAL_YEAR), desc(TOTOPEXP)) %>%
+  reactable(
+    resizable = T,
+    pagination = FALSE,
+    highlight = TRUE,
+    defaultExpanded = F,
+    compact = T,
+    defaultColDef = colDef(
+      align = "left",
+    ),
+    theme = reactableTheme(
+      headerStyle = list(background = "#ecf0f1", borderColor = "#555")
+    ),
+    columns = list(
+      FISCAL_YEAR = colDef(
+        name = "Year",
+        maxWidth = 75,
+        sticky = "left",
+        style = list(backgroundColor = "#f7f7f7")
+      ),
+      POPU_LSA = colDef(
+        name = "Population of Legal Service Area",
+        maxWidth = 125,
+        format = colFormat(separators = TRUE),
+        sticky = "left",
+        style = list(
+          borderRight = "1px solid #aaa",
+          backgroundColor = "#f7f7f7"
+        ),
+        headerStyle = list(borderRight = "1px solid #aaa")
+      ),
+      TOTOPEXP = colDef(
+        name = "Total Operations Expenses",
+        format = colFormat(currency = "USD", separators = TRUE),
+        style = list(borderRight = "1px solid #aaa"),
+        headerStyle = list(borderRight = "1px solid #aaa")
+      ),
+      STAFFEXP = colDef(
+        name = "Total Staff Expenses",
+        format = colFormat(currency = "USD", separators = TRUE)
+      ),
+      STAFF_PCT = colDef(
+        name = "Staff % of Total",
+        format = colFormat(suffix = "%"),
+        style = list(borderRight = "1px solid #aaa"),
+        headerStyle = list(borderRight = "1px solid #aaa")
+      ),
+      TOTEXPCO = colDef(
+        name = "Total Collections Expenses",
+        format = colFormat(currency = "USD", separators = TRUE)
+      ),
+      COLLECTION_PCT = colDef(
+        name = "Collection % of Total",
+        format = colFormat(suffix = "%"),
+        style = list(borderRight = "1px solid #aaa"),
+        headerStyle = list(borderRight = "1px solid #aaa")
+      ),
+      OTHOPEXP = colDef(
+        name = "Other Operations Expenses",
+        format = colFormat(currency = "USD", separators = TRUE)
+      ),
+      OTHOP_PCT = colDef(
+        name = "Other % of Total",
+        format = colFormat(suffix = "%")
+      )
+    )
+  ) %>%
+  add_title("Grantsville City Library Operational Expenses")
+
+```
+
+```{r}
+#| include: false
+# What is the $ per capita compared to other libraries across UT?
+
+utpls %>%
+  mutate(across(
+    c(POPU_LSA, TOTINCM, TOTSTAFF, TOTOPEXP, VISITS, REGBOR),
+    ~ as.numeric(.)
+  )) %>%
+  group_by(CURRENT_LIBNAME, FISCAL_YEAR) %>%
+  summarise(
+    Library = CURRENT_LIBNAME,
+    `Fiscal Year` = FISCAL_YEAR,
+    `Population of Legal Service Area` = format(POPU_LSA, big.mark = ","),
+    `Revenue` = TOTINCM,
+    `Revenue Per Capita` = round(TOTINCM / POPU_LSA, 2),
+    `Expenditures` = TOTOPEXP,
+    `Expenditures Per Capita` = round(TOTOPEXP / POPU_LSA, 2),
+    `FTE` = round(TOTSTAFF, 2),
+    `FTE Per 1000` = round((TOTSTAFF / POPU_LSA) * 1000, 2)
+  ) %>%
+  arrange(desc(`Fiscal Year`), desc(Expenditures)) %>%
+  select(-c(FISCAL_YEAR, CURRENT_LIBNAME)) %>%
+  reactable(
+    pagination = FALSE,
+    height = 500,
+    filterable = TRUE,
+    resizable = TRUE,
+    defaultExpanded = FALSE,
+    compact = TRUE,
+    striped = TRUE,
+    defaultColDef = colDef(
+      align = "left",
+    ),
+    theme = reactableTheme(
+      backgroundColor = "transparent",
+      headerStyle = list(background = "#ecf0f1", borderColor = "#555")
+    ),
+    columns = list(
+      Library = colDef(
+        style = function(value) {
+          if (value == "Grantsville City Library") {
+            fontweight = "bold"
+          } else {
+            fontweight = 300
+          }
+          list(fontWeight = fontweight)
+        }
+      ),
+      Revenue = colDef(
+        format = colFormat(currency = "USD", separators = TRUE, digits = 0)
+      ),
+      `Revenue Per Capita` = colDef(
+        format = colFormat(currency = "USD", separators = TRUE, )
+      ),
+      Expenditures = colDef(
+        format = colFormat(currency = "USD", separators = TRUE, digits = 0)
+      ),
+      `Expenditures Per Capita` = colDef(
+        format = colFormat(currency = "USD", separators = TRUE)
+      )
+    )
+  )
+```
+
+
+
+## Revenue differences between Grantsville and Other Utah Libraries
+
+The comparison line (in orange) represents all libraries except for Grantsville (in blue). 
+
+::: {.panel-tabset}
+
+## Compared to All Libraries
+```{r}
+# Revenue Gap
+
+ut_revenue <- utpls %>%
+  filter(FSCSKEY != "UT8003") %>%
+  ungroup() %>%
+  mutate(TOTINCM = as.numeric(TOTINCM), POPU_LSA = as.numeric(POPU_LSA)) %>%
+  group_by(FISCAL_YEAR) %>%
+  summarise(
+    Library = "All Libraries",
+    TOTINCM = sum(TOTINCM),
+    POPU_LSA = sum(POPU_LSA),
+    totincm_percap = round((TOTINCM / POPU_LSA), 2)
+  ) %>%
+  distinct()
+
+gv_revenue <- utpls %>%
+  filter(FSCSKEY == "UT8003") %>%
+  ungroup() %>%
+  mutate(TOTINCM = as.numeric(TOTINCM), POPU_LSA = as.numeric(POPU_LSA)) %>%
+  group_by(FISCAL_YEAR) %>%
+  summarise(
+    Library = CURRENT_LIBNAME,
+    TOTINCM = sum(TOTINCM),
+    POPU_LSA = sum(POPU_LSA),
+    totincm_percap = round((TOTINCM / POPU_LSA), 2)
+  ) %>%
+  distinct()
+
+revenue <- rbind(ut_revenue, gv_revenue) %>%
+  select(-TOTINCM, -POPU_LSA) %>%
+  mutate(FISCAL_YEAR = as.numeric(FISCAL_YEAR)) %>%
+  pivot_wider(names_from = Library, values_from = totincm_percap)
+
+ggplot(revenue) +
+  geom_line(
+    aes(
+      y = `Grantsville City Library`,
+      x = FISCAL_YEAR,
+      colour = "Grantsville City Library"
+    )
+  ) +
+  geom_line(
+    aes(y = `All Libraries`, x = FISCAL_YEAR, colour = "All Libraries")
+  ) +
+  labs(
+    title = "Revenue Gap Between Grantsville & All Other Libraries",
+    subtitle = "",
+    y = "Revenue per Capita",
+    x = NULL,
+    colour = NULL
+  ) +
+  scale_colour_manual(
+    values = c("Grantsville City Library" = "blue", "All Libraries" = "orange")
+  ) +
+  theme_minimal() +
+  scale_x_continuous(breaks = 2015:2024) +
+  theme(legend.position = "bottom")
+
+```
+
+## Compared to Libraries serving populations < 50,000
+```{r}
+# revenue Gap
+
+ut_revenue_50000 <- utpls %>%
+  filter(FSCSKEY != "UT8003", POPU_LSA <= 50000) %>%
+  ungroup() %>%
+  mutate(TOTINCM = as.numeric(TOTINCM), POPU_LSA = as.numeric(POPU_LSA)) %>%
+  group_by(FISCAL_YEAR) %>%
+  summarise(
+    Library = "All Libraries",
+    TOTINCM = sum(TOTINCM),
+    POPU_LSA = sum(POPU_LSA),
+    totincm_percap = round((TOTINCM / POPU_LSA), 2)
+  ) %>%
+  distinct()
+
+gv_revenue_50000 <- utpls %>%
+  filter(FSCSKEY == "UT8003") %>%
+  ungroup() %>%
+  mutate(TOTINCM = as.numeric(TOTINCM), POPU_LSA = as.numeric(POPU_LSA)) %>%
+  group_by(FISCAL_YEAR) %>%
+  summarise(
+    Library = CURRENT_LIBNAME,
+    TOTINCM = sum(TOTINCM),
+    POPU_LSA = sum(POPU_LSA),
+    totincm_percap = round((TOTINCM / POPU_LSA), 2)
+  ) %>%
+  distinct()
+
+revenue_50000 <- rbind(ut_revenue_50000, gv_revenue_50000) %>%
+  select(-TOTINCM, -POPU_LSA) %>%
+  mutate(FISCAL_YEAR = as.numeric(FISCAL_YEAR)) %>%
+  pivot_wider(names_from = Library, values_from = totincm_percap)
+
+ggplot(revenue_50000) +
+  geom_line(
+    aes(
+      y = `Grantsville City Library`,
+      x = FISCAL_YEAR,
+      colour = "Grantsville City Library"
+    )
+  ) +
+  geom_line(
+    aes(y = `All Libraries`, x = FISCAL_YEAR, colour = "All Libraries")
+  ) +
+  labs(
+    title = "Revenue Gap Between Grantsville & All Other Libraries (< 50,000)",
+    subtitle = "",
+    y = "Revenue per Capita",
+    x = NULL,
+    colour = NULL
+  ) +
+  scale_colour_manual(
+    values = c("Grantsville City Library" = "blue", "All Libraries" = "orange")
+  ) +
+  theme_minimal() +
+  scale_x_continuous(breaks = 2015:2024) +
+  theme(legend.position = "bottom")
+```
+
+:::
+
+
+## Staffing differences between Grantsville and other Utah Libraries
+
+The comparison line (in orange) represents all libraries except for Grantsville (in blue).
+
+::: {.panel-tabset}
+
+## Compared to All Libraries
+```{r}
+# FTE Gap
+
+ut_fte <- utpls %>%
+  filter(FSCSKEY != "UT8003") %>%
+  ungroup() %>%
+  mutate(TOTSTAFF = as.numeric(TOTSTAFF), POPU_LSA = as.numeric(POPU_LSA)) %>%
+  group_by(FISCAL_YEAR) %>%
+  summarise(
+    Library = "All Libraries",
+    TOTSTAFF = sum(TOTSTAFF),
+    POPU_LSA = sum(POPU_LSA),
+    totstaff_percap = round((TOTSTAFF / POPU_LSA) * 1000, 2)
+  ) %>%
+  distinct()
+
+gv_fte <- utpls %>%
+  filter(FSCSKEY == "UT8003") %>%
+  ungroup() %>%
+  mutate(TOTSTAFF = as.numeric(TOTSTAFF), POPU_LSA = as.numeric(POPU_LSA)) %>%
+  group_by(FISCAL_YEAR) %>%
+  summarise(
+    Library = CURRENT_LIBNAME,
+    TOTSTAFF = sum(TOTSTAFF),
+    POPU_LSA = sum(POPU_LSA),
+    totstaff_percap = round((TOTSTAFF / POPU_LSA) * 1000, 2)
+  ) %>%
+  distinct()
+
+fte <- rbind(ut_fte, gv_fte) %>%
+  select(-TOTSTAFF, -POPU_LSA) %>%
+  mutate(FISCAL_YEAR = as.numeric(FISCAL_YEAR)) %>%
+  pivot_wider(names_from = Library, values_from = totstaff_percap)
+
+ggplot(fte) +
+  geom_line(
+    aes(
+      y = `Grantsville City Library`,
+      x = FISCAL_YEAR,
+      colour = "Grantsville City Library"
+    )
+  ) +
+  geom_line(
+    aes(y = `All Libraries`, x = FISCAL_YEAR, colour = "All Libraries")
+  ) +
+  labs(
+    title = "Staffing Gap Between Grantsville & All Other Libraries",
+    subtitle = "",
+    y = "FTE per 1000 People",
+    x = NULL,
+    colour = NULL
+  ) +
+  scale_colour_manual(
+    values = c("Grantsville City Library" = "blue", "All Libraries" = "orange")
+  ) +
+  theme_minimal() +
+  scale_x_continuous(breaks = 2015:2024) +
+  theme(legend.position = "bottom")
+```
+
+## Compared to Libraries serving populations < 50,000
+```{r}
+# FTE Gap
+
+ut_fte_50000 <- utpls %>%
+  filter(FSCSKEY != "UT8003", POPU_LSA <= 50000) %>%
+  ungroup() %>%
+  mutate(TOTSTAFF = as.numeric(TOTSTAFF), POPU_LSA = as.numeric(POPU_LSA)) %>%
+  group_by(FISCAL_YEAR) %>%
+  summarise(
+    Library = "All Libraries",
+    TOTSTAFF = sum(TOTSTAFF),
+    POPU_LSA = sum(POPU_LSA),
+    totstaff_percap = round((TOTSTAFF / POPU_LSA) * 1000, 2)
+  ) %>%
+  distinct()
+
+gv_fte_50000 <- utpls %>%
+  filter(FSCSKEY == "UT8003") %>%
+  ungroup() %>%
+  mutate(TOTSTAFF = as.numeric(TOTSTAFF), POPU_LSA = as.numeric(POPU_LSA)) %>%
+  group_by(FISCAL_YEAR) %>%
+  summarise(
+    Library = CURRENT_LIBNAME,
+    TOTSTAFF = sum(TOTSTAFF),
+    POPU_LSA = sum(POPU_LSA),
+    totstaff_percap = round((TOTSTAFF / POPU_LSA) * 1000, 2)
+  ) %>%
+  distinct()
+
+fte_50000 <- rbind(ut_fte_50000, gv_fte_50000) %>%
+  select(-TOTSTAFF, -POPU_LSA) %>%
+  mutate(FISCAL_YEAR = as.numeric(FISCAL_YEAR)) %>%
+  pivot_wider(names_from = Library, values_from = totstaff_percap)
+
+ggplot(fte_50000) +
+  geom_line(
+    aes(
+      y = `Grantsville City Library`,
+      x = FISCAL_YEAR,
+      colour = "Grantsville City Library"
+    )
+  ) +
+  geom_line(
+    aes(y = `All Libraries`, x = FISCAL_YEAR, colour = "All Libraries")
+  ) +
+  labs(
+    title = "Staffing Gap Between Grantsville & All Other Libraries (< 50,000)",
+    subtitle = "",
+    y = "FTE per 1000 People",
+    x = NULL,
+    colour = NULL
+  ) +
+  scale_colour_manual(
+    values = c("Grantsville City Library" = "blue", "All Libraries" = "orange")
+  ) +
+  theme_minimal() +
+  scale_x_continuous(breaks = 2015:2024) +
+  theme(legend.position = "bottom")
+
+```
+
+:::
+
+
+## How much are staff handling in 2024?
+
+With fewer FTE per capita than other Utah libraries, each employee is responsible for a high volume of service. The table below illustrates the average workload per FTE. 
+
+```{r}
+staff_handle <- utpls %>%
+  filter(FSCSKEY == "UT8003", FISCAL_YEAR == 2024) %>%
+  select(TOTSTAFF, POPU_LSA, VISITS, REGBOR, REFERENC, TOTPRO, TOTATTEN) %>%
+  pivot_longer(
+    !TOTSTAFF,
+    names_to = "Metric",
+    values_to = "Values"
+  ) %>%
+  mutate(
+    TOTSTAFF = as.numeric(TOTSTAFF),
+    Values = as.numeric(Values),
+    handle = round(Values / TOTSTAFF, 2),
+    Metric = case_when(
+      Metric == "POPU_LSA" ~ "Population per 1 FTE",
+      Metric == "VISITS" ~ "Visits per 1 FTE",
+      Metric == "TOTPRO" ~ "Programs per 1 FTE",
+      Metric == "REFERENC" ~ "Reference Transactions per 1 FTE",
+      Metric == "REGBOR" ~ "Card Holders per 1 FTE",
+      Metric == "TOTATTEN" ~ "Program Attendance per 1 FTE"
+    )
+  )
+
+staff_handle %>%
+  select(Metric, handle) %>%
+  #arrange(desc(handle)) %>%
+  reactable(
+    resizable = T,
+    defaultExpanded = F,
+    compact = T,
+    striped = T,
+    theme = reactableTheme(
+      backgroundColor = "transparent",
+      headerStyle = list(borderColor = "#555")
+    ),
+    columns = list(
+      Metric = colDef(name = ""),
+      handle = colDef(
+        name = "",
+        format = colFormat(separators = TRUE, digits = 2)
+      )
+    )
+  )
+
+```
