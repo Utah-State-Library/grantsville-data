@@ -16,6 +16,7 @@ library(magrittr)
 library(ggplot2)
 library(reactable)
 library(reactablefmtr)
+library(scales)
 ```
 
 ```{r}
@@ -551,8 +552,6 @@ utpls %>%
 
 ## Revenue differences between Grantsville and Other Utah Libraries
 
-The comparison line (in orange) represents all libraries except for Grantsville (in blue). 
-
 ::: {.panel-tabset}
 
 ## Compared to All Libraries
@@ -563,12 +562,12 @@ ut_revenue <- utpls %>%
   filter(FSCSKEY != "UT8003") %>%
   ungroup() %>%
   mutate(TOTINCM = as.numeric(TOTINCM), POPU_LSA = as.numeric(POPU_LSA)) %>%
+  group_by(FISCAL_YEAR, FSCSKEY) %>%
+  mutate(percap = TOTINCM / POPU_LSA) %>%
   group_by(FISCAL_YEAR) %>%
   summarise(
-    Library = "All Libraries",
-    TOTINCM = sum(TOTINCM),
-    POPU_LSA = sum(POPU_LSA),
-    totincm_percap = round((TOTINCM / POPU_LSA), 2)
+    Library = "Utah Average",
+    totincm_percap = round(mean(percap), 2)
   ) %>%
   distinct()
 
@@ -579,14 +578,11 @@ gv_revenue <- utpls %>%
   group_by(FISCAL_YEAR) %>%
   summarise(
     Library = CURRENT_LIBNAME,
-    TOTINCM = sum(TOTINCM),
-    POPU_LSA = sum(POPU_LSA),
     totincm_percap = round((TOTINCM / POPU_LSA), 2)
   ) %>%
   distinct()
 
 revenue <- rbind(ut_revenue, gv_revenue) %>%
-  select(-TOTINCM, -POPU_LSA) %>%
   mutate(FISCAL_YEAR = as.numeric(FISCAL_YEAR)) %>%
   pivot_wider(names_from = Library, values_from = totincm_percap)
 
@@ -599,20 +595,22 @@ ggplot(revenue) +
     )
   ) +
   geom_line(
-    aes(y = `All Libraries`, x = FISCAL_YEAR, colour = "All Libraries")
+    aes(y = `Utah Average`, x = FISCAL_YEAR, colour = "Utah Average")
   ) +
   labs(
-    title = "Revenue Gap Between Grantsville & All Other Libraries",
-    subtitle = "",
+    title = "Revenue Per Capita",
+    subtitle = "Compared to All Other Utah Libraries",
+    caption = "The comparison line (in orange) represents all libraries except for Grantsville (in blue)",
     y = "Revenue per Capita",
     x = NULL,
     colour = NULL
   ) +
   scale_colour_manual(
-    values = c("Grantsville City Library" = "blue", "All Libraries" = "orange")
+    values = c("Grantsville City Library" = "blue", "Utah Average" = "orange")
   ) +
-  theme_minimal() +
+  theme_minimal(base_size = 16) +
   scale_x_continuous(breaks = 2015:2024) +
+  scale_y_continuous(labels = label_dollar()) +
   theme(legend.position = "bottom")
 
 ```
@@ -625,12 +623,12 @@ ut_revenue_50000 <- utpls %>%
   filter(FSCSKEY != "UT8003", POPU_LSA <= 50000) %>%
   ungroup() %>%
   mutate(TOTINCM = as.numeric(TOTINCM), POPU_LSA = as.numeric(POPU_LSA)) %>%
+  group_by(FISCAL_YEAR, FSCSKEY) %>%
+  mutate(percap = TOTINCM / POPU_LSA) %>%
   group_by(FISCAL_YEAR) %>%
   summarise(
-    Library = "All Libraries",
-    TOTINCM = sum(TOTINCM),
-    POPU_LSA = sum(POPU_LSA),
-    totincm_percap = round((TOTINCM / POPU_LSA), 2)
+    Library = "Utah Average (< 50,000)",
+    totincm_percap = round(mean(percap), 2)
   ) %>%
   distinct()
 
@@ -641,14 +639,11 @@ gv_revenue_50000 <- utpls %>%
   group_by(FISCAL_YEAR) %>%
   summarise(
     Library = CURRENT_LIBNAME,
-    TOTINCM = sum(TOTINCM),
-    POPU_LSA = sum(POPU_LSA),
     totincm_percap = round((TOTINCM / POPU_LSA), 2)
   ) %>%
   distinct()
 
 revenue_50000 <- rbind(ut_revenue_50000, gv_revenue_50000) %>%
-  select(-TOTINCM, -POPU_LSA) %>%
   mutate(FISCAL_YEAR = as.numeric(FISCAL_YEAR)) %>%
   pivot_wider(names_from = Library, values_from = totincm_percap)
 
@@ -661,20 +656,29 @@ ggplot(revenue_50000) +
     )
   ) +
   geom_line(
-    aes(y = `All Libraries`, x = FISCAL_YEAR, colour = "All Libraries")
+    aes(
+      y = `Utah Average (< 50,000)`,
+      x = FISCAL_YEAR,
+      colour = "Utah Average (< 50,000)"
+    )
   ) +
   labs(
-    title = "Revenue Gap Between Grantsville & All Other Libraries (< 50,000)",
-    subtitle = "",
+    title = "Revenue Per Capita",
+    subtitle = "Compared to Libraries Serving < 50,000 People",
+    caption = "The comparison line (in orange) represents all libraries except for Grantsville (in blue)",
     y = "Revenue per Capita",
     x = NULL,
     colour = NULL
   ) +
   scale_colour_manual(
-    values = c("Grantsville City Library" = "blue", "All Libraries" = "orange")
+    values = c(
+      "Grantsville City Library" = "blue",
+      "Utah Average (< 50,000)" = "orange"
+    )
   ) +
-  theme_minimal() +
+  theme_minimal(base_size = 16) +
   scale_x_continuous(breaks = 2015:2024) +
+  scale_y_continuous(labels = label_dollar()) +
   theme(legend.position = "bottom")
 ```
 
@@ -682,8 +686,6 @@ ggplot(revenue_50000) +
 
 
 ## Staffing differences between Grantsville and other Utah Libraries
-
-The comparison line (in orange) represents all libraries except for Grantsville (in blue).
 
 ::: {.panel-tabset}
 
@@ -734,8 +736,9 @@ ggplot(fte) +
     aes(y = `All Libraries`, x = FISCAL_YEAR, colour = "All Libraries")
   ) +
   labs(
-    title = "Staffing Gap Between Grantsville & All Other Libraries",
-    subtitle = "",
+    title = "Staffing Per 1000 People",
+    subtitle = "Compared to All Other Utah Libraries",
+    caption = "The comparison line (in orange) represents all libraries except for Grantsville (in blue)",
     y = "FTE per 1000 People",
     x = NULL,
     colour = NULL
@@ -743,7 +746,7 @@ ggplot(fte) +
   scale_colour_manual(
     values = c("Grantsville City Library" = "blue", "All Libraries" = "orange")
   ) +
-  theme_minimal() +
+  theme_minimal(base_size = 16) +
   scale_x_continuous(breaks = 2015:2024) +
   theme(legend.position = "bottom")
 ```
@@ -795,8 +798,9 @@ ggplot(fte_50000) +
     aes(y = `All Libraries`, x = FISCAL_YEAR, colour = "All Libraries")
   ) +
   labs(
-    title = "Staffing Gap Between Grantsville & All Other Libraries (< 50,000)",
-    subtitle = "",
+    title = "Staffing Per 1000 People",
+    subtitle = "Compared to Libraries Serving < 50,000 People",
+    caption = "The comparison line (in orange) represents all libraries except for Grantsville (in blue)",
     y = "FTE per 1000 People",
     x = NULL,
     colour = NULL
@@ -804,7 +808,7 @@ ggplot(fte_50000) +
   scale_colour_manual(
     values = c("Grantsville City Library" = "blue", "All Libraries" = "orange")
   ) +
-  theme_minimal() +
+  theme_minimal(base_size = 16) +
   scale_x_continuous(breaks = 2015:2024) +
   theme(legend.position = "bottom")
 
