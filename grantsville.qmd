@@ -24,7 +24,7 @@ utpls <- readRDS("./utpls.RDS")
 ```
 
 
-## 2024 Statistics for Grantsville Public Library
+## 2024 Statistics for Grantsville City Library
 
 ```{r}
 gv_df <- utpls %>%
