@@ -42,9 +42,14 @@ gv_df <- utpls %>%
     PITUSR,
     GPTERMS,
     REFERENC,
+    BKVOL,
+    AUDIO_PH,
+    VIDEO_PH,
+    TOTPHYS,
     PHYSCIR,
     KIDCIRCL,
     ELMATCIR,
+    TOTCIR,
     VISITS,
     PHYSCIR,
     LOANFM,
@@ -81,9 +86,14 @@ gv_df %<>%
       Metric == "REGBOR" ~ "Card Holders",
       Metric == "PITUSR" ~ "Public Computer Uses",
       Metric == "REFERENC" ~ "Reference Transactions",
+      Metric == "BKVOL" ~ "Print Materials",
+      Metric == "AUDIO_PH" ~ "Audio Materials (Physical Copies)",
+      Metric == "VIDEO_PH" ~ "Video Materials (Physical Copies)",
+      Metric == "TOTPHYS" ~ "Total Physical Collection",
       Metric == "PHYSCIR" ~ "Physical Item Circulation",
       Metric == "KIDCIRCL" ~ "Childrens Item Circulation",
       Metric == "ELMATCIR" ~ "Electronic Material Circulation",
+      Metric == "TOTCIR" ~ "Total Circulation",
       Metric == "VISITS" ~ "Visits",
       Metric == "LOANFM" ~ "ILLs Received",
       Metric == "GPTERMS" ~ "Number of Public Computers",
@@ -243,6 +253,49 @@ revenue %>%
 ```
 
 
+## Collection
+
+The collection has increased slightly over the past year, but circulation has increased at a faster pace. Increasing the collection size may help Grantsville City Library to meet the needs of its patrons.
+
+```{r}
+collection <- gv_df %>%
+  filter(
+    Metric %in%
+      c("BKVOL", "AUDIO_PH", "VIDEO_PH", "TOTPHYS")
+  ) %>%
+  select(Metric_pretty, v_2023, v_2024, diff_pct)
+
+collection %>%
+  reactable(
+    resizable = T,
+    defaultExpanded = F,
+    compact = T,
+    striped = T,
+    defaultColDef = colDef(
+      align = "left",
+    ),
+    theme = reactableTheme(
+      backgroundColor = "transparent",
+      headerStyle = list(borderColor = "#555")
+    ),
+    columns = list(
+      Metric_pretty = colDef(name = ""),
+      v_2023 = colDef(
+        name = "2023",
+        format = colFormat(separators = TRUE)
+      ),
+      v_2024 = colDef(
+        name = "2024",
+        format = colFormat(separators = TRUE)
+      ),
+      diff_pct = colDef(
+        name = "Change from Last Year",
+        format = colFormat(percent = TRUE, digits = 2)
+      )
+    )
+  )
+```
+
 ## Circulation
 
 Circulation of all materials are up from last year, with electronic material circulation increasing the most.
@@ -251,7 +304,7 @@ Circulation of all materials are up from last year, with electronic material cir
 circ <- gv_df %>%
   filter(
     Metric %in%
-      c("PHYSCIR", "KIDCIRCL", "ELMATCIR")
+      c("PHYSCIR", "KIDCIRCL", "ELMATCIR", "TOTCIR")
   ) %>%
   select(Metric_pretty, v_2023, v_2024, diff_pct)
 
@@ -550,7 +603,7 @@ utpls %>%
 
 
 
-## Revenue differences between Grantsville and Other Utah Libraries
+## Revenue - how does Grantsville compare?
 
 ::: {.panel-tabset}
 
@@ -685,7 +738,7 @@ ggplot(revenue_50000) +
 :::
 
 
-## Staffing differences between Grantsville and other Utah Libraries
+## Staffing - how does Grantsville compare?
 
 ::: {.panel-tabset}
 
@@ -819,12 +872,37 @@ ggplot(fte_50000) +
 
 ## How much are staff handling in 2024?
 
+```{r}
+n_staff <- utpls %>%
+  filter(FSCSKEY == "UT8003", FISCAL_YEAR == "2024") %>%
+  select(TOT_LIB_STAFF) %>%
+  pull()
+n_FTE <- utpls %>%
+  filter(FSCSKEY == "UT8003", FISCAL_YEAR == "2024") %>%
+  select(TOTSTAFF) %>%
+  pull()
+```
+
 With fewer FTE per capita than other Utah libraries, each employee is responsible for a high volume of service. The table below illustrates the average workload per FTE. 
+
+FTE represents a 40 hour work week and does not necessarily align with the number of employees at the library. Some staff may be full time or part time. In 2024, Grantsville had 
+`r n_staff` employees who split `r n_FTE` FTE.
+
+NOTE: This table is a workload proxy - it does not show actual numbers for staff work. 
 
 ```{r}
 staff_handle <- utpls %>%
   filter(FSCSKEY == "UT8003", FISCAL_YEAR == 2024) %>%
-  select(TOTSTAFF, POPU_LSA, VISITS, REGBOR, REFERENC, TOTPRO, TOTATTEN) %>%
+  select(
+    TOTSTAFF,
+    POPU_LSA,
+    VISITS,
+    REGBOR,
+    TOTCIR,
+    REFERENC,
+    TOTPRO,
+    TOTATTEN
+  ) %>%
   pivot_longer(
     !TOTSTAFF,
     names_to = "Metric",
@@ -838,6 +916,7 @@ staff_handle <- utpls %>%
       Metric == "POPU_LSA" ~ "Population per 1 FTE",
       Metric == "VISITS" ~ "Visits per 1 FTE",
       Metric == "TOTPRO" ~ "Programs per 1 FTE",
+      Metric == "TOTCIR" ~ "Circulation per 1 FTE",
       Metric == "REFERENC" ~ "Reference Transactions per 1 FTE",
       Metric == "REGBOR" ~ "Card Holders per 1 FTE",
       Metric == "TOTATTEN" ~ "Program Attendance per 1 FTE"
